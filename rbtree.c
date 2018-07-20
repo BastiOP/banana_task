@@ -1,238 +1,290 @@
-/*
-** rbtree.c for epitech in /home/chapui_s/travaux/rbtree/
-**
-** Made by chapui_s
-** Login   <chapui_s@epitech.eu>
-**
-** Started on  Mon Feb 16 00:30:33 2015 chapui_s
-** Last update Mon Feb 16 00:51:05 2015 chapui_s
-*/
-
+#include <stdio.h>
+#include <stdlib.h>
 #include "rbtree.h"
 
-t_rbnode		*root_rbtree = (t_rbnode*)0;
-
-static inline int	is_red(t_rbnode *node)
+typedef struct rbt_node
 {
-  return ((node) ? (node->color == RED) : (0));
+    void* data;
+    int color; //BLACK = 1, RED = 2
+    int key;
+    struct rbt_node* left;
+    struct rbt_node* right;
+    struct rbt_node* parent;
+
+}rbt_node;
+
+typedef struct rbtree
+{
+    rbt_node* root;
+    rbt_node* current;
+    rbt_node* nil;
+
+}RBTree;
+
+RBTree* create_RBTree()
+{
+    RBTree* tree = (RBTree*) calloc(1, sizeof(RBTree));
+    tree->root = tree->nil;
+    return tree;
 }
 
-static inline int	my_compare(unsigned int key1, unsigned int key2)
+rbt_node* create_rbt_node(int key, void* data)
 {
-  return ((key1 == key2) ? (0) : ((key1 < key2) ? (-1) : (1)));
+    rbt_node* node = (rbt_node*) calloc(1, sizeof(rbt_node));
+    node->data = data;
+    node->key = key;
+    return node;
 }
 
-static void		flip_color(t_rbnode *node)
+void left_rotate(RBTree* T, rbt_node* x)
 {
-  node->color = !(node->color);
-  node->left->color = !(node->left->color);
-  node->right->color = !(node->right->color);
+    rbt_node* y = x->right;
+    x->right = y->left;
+    if (y->left != T->nil)
+        y->left->parent = x;
+    y->parent = x->parent;
+    if (x->parent == T->nil)
+        T->root = y;
+    else if (x == x->parent->left)
+        x->parent->left = y;
+    else
+        x->parent->right = y;
+    y->left = x;
+    x->parent = y;
 }
 
-static t_rbnode		*rotate_left(t_rbnode *left)
+void right_rotate(RBTree* T, rbt_node* x)
 {
-  t_rbnode		*right;
-
-  if (!left)
-    return ((t_rbnode*)0);
-  right = left->right;
-  left->right = right->left;
-  right->left = left;
-  right->color = left->color;
-  left->color = RED;
-  return (right);
+    rbt_node* y = x->left;
+    x->left = y->right;
+    if (y->right != T->nil)
+        y->right->parent = x;
+    y->parent = x->parent;
+    if (x->parent == T->nil)
+        T->root = y;
+    else if (x == x->parent->right)
+        x->parent->right = y;
+    else
+        x->parent->left = y;
+    y->right = x;
+    x->parent = y;
 }
 
-static t_rbnode		*rotate_right(t_rbnode *right)
+void RB_insert_fixup(RBTree* T, rbt_node* z)
 {
-  t_rbnode		*left;
-
-  if(!right)
-    return ((t_rbnode*)0);
-  left = right->left;
-  right->left = left->right;
-  left->right = right;
-  left->color = right->color;
-  right->color = RED;
-  return (left);
-}
-
-t_rbnode                *create_node(t_key key,
-                                     t_value value)
-{
-  t_rbnode              *new;
-
-  if ((new = (t_rbnode*)malloc(sizeof(*new))) == (t_rbnode*)0)
-    return ((t_rbnode*)0);
-  new->key = key;
-  new->value = value;
-  new->color = RED;
-  new->left = (t_rbnode*)0;
-  new->right = (t_rbnode*)0;
-  return (new);
-}
-
-static t_rbnode		*insert_this(t_rbnode *node, t_key key, t_value value)
-{
-  int			res;
-
-  if (!node)
-    return (create_node(key, value));
-  res = my_compare(key, node->key);
-  if (res == 0)
-    node->value = value;
-  else if (res < 0)
-    node->left = insert_this(node->left, key, value);
-  else
-    node->right = insert_this(node->right, key, value);
-  if (is_red(node->right) && !is_red(node->left))
-    node = rotate_left(node);
-  if (is_red(node->left) && is_red(node->left->left))
-    node = rotate_right(node);
-  if (is_red(node->left) && is_red(node->right))
-    flip_color(node);
-  return (node);
-}
-
-void		insert(t_key key, t_value value)
-{
-  root_rbtree = insert_this(root_rbtree, key, value);
-  if (root_rbtree)
-    root_rbtree->color = BLACK;
-}
-
-t_value		get_key(t_rbnode *node, t_key key)
-{
-  int		cmp;
-
-  while (node)
-  {
-    if (!(cmp = my_compare(key, node->key)))
-      return (node->value);
-    node = ((cmp < 0) ? (node->left) : (node->right));
-  }
-  return (0);
-}
-
-static t_rbnode		*min(t_rbnode *node)
-{
-  if (!node)
-    return ((t_rbnode*)0);
-  while (node->left)
-    node = node->left;
-  return (node);
-}
-
-inline t_rbnode		*balance_me_that(t_rbnode *node)
-{
-  if (is_red(node->right))
-    node = rotate_left(node);
-  if (is_red(node->left) && is_red(node->left->left))
-    node = rotate_right(node);
-  if (is_red(node->left) && is_red(node->right))
-    flip_color(node);
-  return (node);
-}
-
-static t_rbnode		*move_red_to_left(t_rbnode *node)
-{
-  flip_color(node);
-  if (node && node->right && is_red(node->right->left))
-  {
-    node->right = rotate_right(node->right);
-    node = rotate_left(node);
-    flip_color(node);
-  }
-  return (node);
-}
-
-static t_rbnode		*move_red_to_right(t_rbnode *node)
-{
-  flip_color(node);
-  if (node && node->left && is_red(node->left->left))
-  {
-    node = rotate_right(node);
-    flip_color(node);
-  }
-  return (node);
-}
-
-static t_rbnode		*remove_min(t_rbnode *node)
-{
-  if (!node)
-    return ((t_rbnode*)0);
-  if (!node->left)
-  {
-    free(node);
-    return ((t_rbnode*)0);
-  }
-  if (!is_red(node->left) && !is_red(node->left->left))
-    node = move_red_to_left(node);
-  node->left = remove_min(node->left);
-  return (balance_me_that(node));
-}
-
-static t_rbnode		*remove_it(t_rbnode *node, t_key key)
-{
-  t_rbnode		*tmp;
-
-  if (!node)
-    return ((t_rbnode*)0);
-  if (my_compare(key, node->key) == -1)
-  {
-    if (node->left)
+    while (z->parent->color == 2)
     {
-      if (!is_red(node->left) && !is_red(node->left->left))
-	node = move_red_to_left(node);
-      node->left = remove_key(node->left, key);
+        if (z->parent == z->parent->parent->left)
+        {
+            rbt_node* y = z->parent->parent->right;
+            if (y->color == 2)
+            {
+                z->parent->color = 1;
+                y->color = 1;
+                z->parent->parent->color = 2;
+                z = z->parent->parent;
+            }
+            else if (z == z->parent->right)
+            {
+                z = z->parent;
+                left_rotate(T, z);
+            }
+            else
+            {
+                z->parent->color = 1;
+                z->parent->parent->color = 2;
+                right_rotate(T, z->parent->parent);
+            }
+        }
+        else
+        {
+            rbt_node* y = z->parent->parent->left;
+            if (y->color == 2)
+            {
+                z->parent->color = 1;
+                y->color = 1;
+                z->parent->parent->color = 2;
+                z = z->parent->parent;
+            }
+            else if (z == z->parent->left)
+            {
+                z = z->parent;
+                right_rotate(T, z);
+            }
+            else
+            {
+                z->parent->color = 1;
+                z->parent->parent->color = 2;
+                left_rotate(T, z->parent->parent);
+            }
+        }
     }
-  }
-  else
-  {
-    if (is_red(node->left))
-      node = rotate_right(node);
-    if (!my_compare(key, node->key) && !node->right)
-    {
-      free(node);
-      return ((t_rbnode*)0);
-    }
-    if (node->right)
-    {
-      if (!is_red(node->right) && !is_red(node->right->left))
-	node = move_red_to_right(node);
-      if (!my_compare(key, node->key))
-      {
-	tmp = min(node->right);
-	node->key = tmp->key;
-	node->value = tmp->value;
-	node->right = remove_min(node->right);
-      }
-      else
-	node->right = remove_key(node->right, key);
-    }
-  }
-  return (balance_me_that(node));
+    T->root->color = 1;
 }
 
-t_rbnode	*remove_key(t_rbnode *node, t_key key)
+void RB_insert(RBTree* T, int key, void* data)
 {
-  node = remove_it(node, key);
-  if (node)
-    node->color = BLACK;
-  return (node);
+    rbt_node* z = create_rbt_node(key, data);
+    rbt_node* y = T->nil;
+    rbt_node* x = T->root;
+    while (x != T->nil)
+    {
+        y = x;
+        if (z->key < x->key)
+            x = x->left;
+        else
+            x = x->right;
+    }
+    z->parent = y;
+    if (y == T->nil)
+        T->root = z;
+    else if (z->key < y->key)
+        y->left = z;
+    else
+        y->right = z;
+    z->left = T->nil;
+    z->right = T->nil;
+    z->color = 2;
+    RB_insert_fixup(T, z);
 }
 
-t_rbnode        *erase_tree(t_rbnode *node)
+void* tree_minimum(RBTree* T, rbt_node* x)
 {
-  if (node)
-  {
-    if (node->left)
-      erase_tree(node->left);
-    if (node->right)
-      erase_tree(node->right);
-    node->left = (t_rbnode*)0;
-    node->right = (t_rbnode*)0;
-    free(node);
-  }
-  return ((t_rbnode*)0);
+    while (x->left != T->nil)
+        x = x->left;
+    return x;
 }
+
+void RB_transplant(RBTree* T, rbt_node* u, rbt_node* v)
+{
+    if (u->parent == T->nil)
+        T->root = v;
+    else if (u == u->parent->left)
+        u->parent->left = v;
+    else
+        u->parent->right = v;
+    v->parent = u->parent;
+}
+
+void RB_delete_fixup(RBTree* T, rbt_node* x)
+{
+    while ((x != T->root)&&(x->color == 1))
+    {
+        if (x == x->parent->left)
+        {
+            rbt_node* w = x->parent->right;
+            if (w->color == 2)
+            {
+                w->color = 1;
+                x->parent->color = 2;
+                left_rotate(T, x->parent);
+                w = x->parent->right;
+            }
+            if ((w->left->color == 1)&&(w->right->color == 1))
+            {
+                w->color = 2;
+                x = x->parent;
+            }
+            else if (w->right->color == 1)
+            {
+                w->left->color = 1;
+                w->color = 2;
+                right_rotate(T, w);
+                w = x->parent->right;
+            }
+            else
+            {
+                w->color = x->parent->color;
+                x->parent->color = 1;
+                w->right->color = 1;
+                left_rotate(T, x->parent);
+                x = T->root;
+            }
+        }
+        else
+        {
+            rbt_node* w = x->parent->left;
+            if (w->color == 2)
+            {
+                w->color = 1;
+                x->parent->color = 2;
+                right_rotate(T, x->parent);
+                w = x->parent->left;
+            }
+            if ((w->right->color == 1)&&(w->left->color == 1))
+            {
+                w->color = 2;
+                x = x->parent;
+            }
+            else if (w->left->color == 1)
+            {
+                w->right->color = 1;
+                w->color = 2;
+                left_rotate(T, w);
+                w = x->parent->left;
+            }
+            else
+            {
+                w->color = x->parent->color;
+                x->parent->color = 1;
+                w->left->color = 1;
+                right_rotate(T, x->parent);
+                x = T->root;
+            }
+        }
+    }
+    x->color = 1;
+}
+
+void RB_delete(RBTree* T, int key)
+{
+    rbt_node* z = RB_search(T, key);
+    rbt_node* y = z;
+    rbt_node* x;
+    int yOriginalcolor = y->color;
+    if (z->left == T->nil)
+    {
+        x = z->right;
+        RB_transplant(T, z, z->right);
+    }
+    else if (z->right == T->nil)
+    {
+        x = z->right;
+        RB_transplant(T, z, z->left);
+    }
+    else
+    {
+        y = tree_minimum(T, z->right);
+        yOriginalcolor = y->color;
+        x = y->right;
+        if (y->parent == z)
+            x->parent = y;
+        else
+        {
+            RB_transplant(T, y, y->right);
+            y->right = z->right;
+            y->right->parent = y;
+        }
+        RB_transplant(T, z, y);
+        y->left = z->left;
+        y->left->parent = y;
+        y->color = z->color;
+    }
+    if (yOriginalcolor == 1)
+        RB_delete_fixup(T, x);
+}
+
+void* RB_search(RBTree* T, int key)
+{
+
+}
+
+void* RB_first(RBTree* T)
+{
+    rbt_node* x = T->root;
+    if (x != T->nil)
+        return tree_minimum(T, x);
+    return NULL;
+}
+
+void* RB_next(RBTree* T);
