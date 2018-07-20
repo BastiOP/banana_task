@@ -1,45 +1,23 @@
-/*
-** rbtree.h for rbtree in /home/chapuis_s/rendu/rbtree
-**
-** Made by chapui_s
-** Login   <chapui_s@epitech.eu>
-**
-** Started on  Mon Jan 26 19:41:38 2015 chapui_s
-** Last update Mon Feb 16 01:01:46 2015 chapui_s
-*/
+#ifndef RBTREE_H
+#define RBTREE_H
 
-#ifndef RBTREE_H_
-# define RBTREE_H_
+typedef struct rbtree RBTree;
 
-# include <stddef.h>
-# include <stdlib.h>
+RBTree* create_RBTree();
 
-typedef enum	rbcolor
-{
-  BLACK = 0,
-  RED = 1
-}		t_rbcolor;
+// Inserta un nuevo "data" al arbol con su respectiva "key".
+void RB_insert(RBTree* T, int key, void* data);
 
-/*-------------------------------------------
-** Modify these values according to the tree
-**------------------------------------------*/
-typedef unsigned int	t_key;
-typedef unsigned int	t_value;
+// Elimina un "data" del arbol mediante su "key".
+void RB_delete(RBTree* T, int key);
 
-typedef struct		s_rbnode
-{
-  t_key			key;
-  t_value		value;
-  t_rbcolor		color;
-  struct s_rbnode	*left;
-  struct s_rbnode	*right;
+// Retorna un "data" del arbol mediante su "key".
+void* RB_search(RBTree* T, int key);
 
-}			t_rbnode;
+// Retorna el "data" raiz del arbol.
+void* RB_first(RBTree* T);
 
-t_rbnode	*erase_tree(t_rbnode *node);
-t_rbnode	*remove_key(t_rbnode *node, t_key key);
-unsigned int	get_size(t_rbnode *node, t_key key);
-t_value		get_key(t_rbnode *node, t_key key);
-void		insert(t_key key, t_value value);
+// Retorna el "data" siguiente al actual.
+void* RB_next(RBTree* T);
 
-#endif /* !RBTREE_H_ */
+#endif // RBTREE_H
